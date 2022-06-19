@@ -123,7 +123,7 @@ pub trait Operations {
     fn igl(&mut self) -> u8;
 }
 
-impl<'cpu> Operations for OLC6502<'cpu> {
+impl Operations for OLC6502 {
     fn adc(&mut self) -> u8 {
         self.fetch();
         let temp = self.a as u16 + self.fetched as u16 + self.get_flag(C) as u16;

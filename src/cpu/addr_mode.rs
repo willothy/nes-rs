@@ -31,7 +31,7 @@ pub trait AddressModes {
     fn izy(&mut self) -> u8;
 }
 
-impl<'cpu> AddressModes for OLC6502<'cpu> {
+impl AddressModes for OLC6502 {
     fn imp(&mut self) -> u8 {
         self.fetched = self.a;
         0

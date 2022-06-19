@@ -1,11 +1,11 @@
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc, cell::RefCell};
 
 use crate::{
     bus::Bus,
     cpu::{
         addr_mode::{AddrMode, AddressModes},
         opcode::OpCode,
-    },
+    }, ppu::OLC2C02,
 };
 
 use super::instruction::*;
@@ -22,8 +22,8 @@ pub enum StatusFlags {
     N = (1 << 7), // Negative
 }
 
-pub struct OLC6502<'cpu> {
-    pub(super) bus: &'cpu mut Bus<'cpu>,
+pub struct OLC6502 {
+    pub(crate) bus: Rc<RefCell<Bus>>,
     pub(super) status: u8,
     pub(super) stack_ptr: u8,
     pub(super) pc: u16,
@@ -37,15 +37,15 @@ pub struct OLC6502<'cpu> {
     pub(super) cycles: u8,
 }
 
-impl Display for OLC6502<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", self.bus.to_string())
+impl Display for OLC6502 {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.bus.borrow().to_string())
     }
 }
 
-impl<'cpu> OLC6502<'cpu> {
-    pub fn new(bus: &'cpu mut Bus<'cpu>) -> OLC6502<'cpu> {
-        OLC6502 {
+impl OLC6502 {
+    pub fn new(bus: Rc<RefCell<Bus>>) -> OLC6502 {
+        let mut cpu = OLC6502 {
             bus,
             status: 0x00,
             stack_ptr: 0x00,
@@ -58,7 +58,8 @@ impl<'cpu> OLC6502<'cpu> {
             addr_rel: 0x00,
             opcode: 0x00,
             cycles: 0x00,
-        }
+        };
+        cpu
     }
 
     pub fn addr_mode(&mut self, addr_mode: AddrMode) -> u8 {
@@ -100,11 +101,11 @@ impl<'cpu> OLC6502<'cpu> {
     }
 
     pub fn read(&self, addr: u16) -> u8 {
-        self.bus.read(addr, false)
+        self.bus.borrow().cpu_read(addr, false)
     }
 
     pub fn write(&mut self, addr: u16, val: u8) {
-        self.bus.write(addr, val);
+        self.bus.borrow_mut().cpu_write(addr, val);
     }
 
     pub fn fetch(&mut self) -> u8 {

@@ -4,8 +4,9 @@ use crate::bus::Device;
 
 #[derive(Debug)]
 pub struct RAM {
-    data: [u8; 0xFFFF],
+    data: [u8; 2048],
 }
+
 
 impl Display for RAM {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -21,20 +22,22 @@ impl Display for RAM {
 
 impl RAM {
     pub fn new() -> RAM {
-        RAM { data: [0; 0xFFFF] }
+        RAM { data: [0; 2048] }
     }
 }
 
 impl Device for RAM {
-    fn address_space(&self) -> u16 {
-        0xFFFF
-    }
 
     fn read(&self, addr: u16, _readonly: bool) -> u8 {
-        self.data[addr as usize]
+        self.data[(addr & 0x07FF) as usize]
     }
 
     fn write(&mut self, addr: u16, val: u8) {
-        self.data[addr as usize] = val;
+        self.data[(addr & 0x07FF) as usize] = val;
     }
+
+    fn in_addr_space(&self, addr: u16) -> bool {
+        addr <= 0x1FFF
+    }
+
 }
