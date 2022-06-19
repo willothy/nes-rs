@@ -1,7 +1,7 @@
 use crate::cpu::StatusFlags;
+use StatusFlags::*;
 
 use super::OLC6502;
-
 
 pub enum OpCode {
     ADC,
@@ -64,72 +64,81 @@ pub enum OpCode {
 }
 
 pub trait Operations {
-    fn ADC(&mut self) -> u8;
-    fn AND(&mut self) -> u8;
-    fn ASL(&mut self) -> u8;
-    fn BCC(&mut self) -> u8;
-    fn BCS(&mut self) -> u8;
-    fn BEQ(&mut self) -> u8;
-    fn BIT(&mut self) -> u8;
-    fn BMI(&mut self) -> u8;
-    fn BNE(&mut self) -> u8;
-    fn BPL(&mut self) -> u8;
-    fn BRK(&mut self) -> u8;
-    fn BVC(&mut self) -> u8;
-    fn BVS(&mut self) -> u8;
-    fn CLC(&mut self) -> u8;
-    fn CLD(&mut self) -> u8;
-    fn CLI(&mut self) -> u8;
-    fn CLV(&mut self) -> u8;
-    fn CMP(&mut self) -> u8;
-    fn CPX(&mut self) -> u8;
-    fn CPY(&mut self) -> u8;
-    fn DEC(&mut self) -> u8;
-    fn DEX(&mut self) -> u8;
-    fn DEY(&mut self) -> u8;
-    fn EOR(&mut self) -> u8;
-    fn INC(&mut self) -> u8;
-    fn INX(&mut self) -> u8;
-    fn INY(&mut self) -> u8;
-    fn JMP(&mut self) -> u8;
-    fn JSR(&mut self) -> u8;
-    fn LDA(&mut self) -> u8;
-    fn LDX(&mut self) -> u8;
-    fn LDY(&mut self) -> u8;
-    fn LSR(&mut self) -> u8;
-    fn NOP(&mut self) -> u8;
-    fn ORA(&mut self) -> u8;
-    fn PHA(&mut self) -> u8;
-    fn PHP(&mut self) -> u8;
-    fn PLA(&mut self) -> u8;
-    fn PLP(&mut self) -> u8;
-    fn ROL(&mut self) -> u8;
-    fn ROR(&mut self) -> u8;
-    fn RTI(&mut self) -> u8;
-    fn RTS(&mut self) -> u8;
-    fn SBC(&mut self) -> u8;
-    fn SEC(&mut self) -> u8;
-    fn SED(&mut self) -> u8;
-    fn SEI(&mut self) -> u8;
-    fn STA(&mut self) -> u8;
-    fn STX(&mut self) -> u8;
-    fn STY(&mut self) -> u8;
-    fn TAX(&mut self) -> u8;
-    fn TAY(&mut self) -> u8;
-    fn TSX(&mut self) -> u8;
-    fn TXA(&mut self) -> u8;
-    fn TXS(&mut self) -> u8;
-    fn TYA(&mut self) -> u8;
-    fn IGL(&mut self) -> u8;
+    fn adc(&mut self) -> u8;
+    fn and(&mut self) -> u8;
+    fn asl(&mut self) -> u8;
+    fn bcc(&mut self) -> u8;
+    fn bcs(&mut self) -> u8;
+    fn beq(&mut self) -> u8;
+    fn bit(&mut self) -> u8;
+    fn bmi(&mut self) -> u8;
+    fn bne(&mut self) -> u8;
+    fn bpl(&mut self) -> u8;
+    fn brk(&mut self) -> u8;
+    fn bvc(&mut self) -> u8;
+    fn bvs(&mut self) -> u8;
+    fn clc(&mut self) -> u8;
+    fn cld(&mut self) -> u8;
+    fn cli(&mut self) -> u8;
+    fn clv(&mut self) -> u8;
+    fn cmp(&mut self) -> u8;
+    fn cpx(&mut self) -> u8;
+    fn cpy(&mut self) -> u8;
+    fn dec(&mut self) -> u8;
+    fn dex(&mut self) -> u8;
+    fn dey(&mut self) -> u8;
+    fn eor(&mut self) -> u8;
+    fn inc(&mut self) -> u8;
+    fn inx(&mut self) -> u8;
+    fn iny(&mut self) -> u8;
+    fn jmp(&mut self) -> u8;
+    fn jsr(&mut self) -> u8;
+    fn lda(&mut self) -> u8;
+    fn ldx(&mut self) -> u8;
+    fn ldy(&mut self) -> u8;
+    fn lsr(&mut self) -> u8;
+    fn nop(&mut self) -> u8;
+    fn ora(&mut self) -> u8;
+    fn pha(&mut self) -> u8;
+    fn php(&mut self) -> u8;
+    fn pla(&mut self) -> u8;
+    fn plp(&mut self) -> u8;
+    fn rol(&mut self) -> u8;
+    fn ror(&mut self) -> u8;
+    fn rti(&mut self) -> u8;
+    fn rts(&mut self) -> u8;
+    fn sbc(&mut self) -> u8;
+    fn sec(&mut self) -> u8;
+    fn sed(&mut self) -> u8;
+    fn sei(&mut self) -> u8;
+    fn sta(&mut self) -> u8;
+    fn stx(&mut self) -> u8;
+    fn sty(&mut self) -> u8;
+    fn tax(&mut self) -> u8;
+    fn tay(&mut self) -> u8;
+    fn tsx(&mut self) -> u8;
+    fn txa(&mut self) -> u8;
+    fn txs(&mut self) -> u8;
+    fn tya(&mut self) -> u8;
+    fn igl(&mut self) -> u8;
 }
 
 impl<'cpu> Operations for OLC6502<'cpu> {
-    fn ADC(&mut self) -> u8 {
-        todo!()
+    fn adc(&mut self) -> u8 {
+        self.fetch();
+        let temp = self.a as u16 + self.fetched as u16 + self.get_flag(C) as u16;
+        self.set_flag(C, temp > 255);
+        self.set_flag(Z, (temp & 0x80) != 0);
+        self.set_flag(
+            V,
+            (!(self.a as u16 ^ self.fetched as u16) & (self.a as u16 ^ temp as u16) & 0x0080) != 0,
+        );
+        self.set_flag(N, (temp & 0x80) != 0);
+        self.a = (temp & 0x00FF) as u8;
+        1
     }
 
-    fn AND(&mut self) -> u8 {
-        use StatusFlags::*;
+    fn and(&mut self) -> u8 {
         self.fetch();
         self.a = self.a & self.fetched;
         self.set_flag(Z, self.a == 0x00);
@@ -137,223 +146,259 @@ impl<'cpu> Operations for OLC6502<'cpu> {
         1
     }
 
-    fn ASL(&mut self) -> u8 {
+    fn asl(&mut self) -> u8 {
         todo!()
     }
 
-    fn BCC(&mut self) -> u8 {
+    fn bcc(&mut self) -> u8 {
         todo!()
     }
 
-    fn BCS(&mut self) -> u8 {
+    fn bcs(&mut self) -> u8 {
+        if self.get_flag(C) == true {
+            self.cycles += 1;
+            self.addr_abs = self.pc + self.addr_rel as u16;
+
+            if (self.addr_abs & 0xFF00) != (self.pc & 0xFF00) {
+                self.cycles += 1;
+            }
+
+            self.pc = self.addr_abs;
+        }
+        0
+    }
+
+    fn beq(&mut self) -> u8 {
         todo!()
     }
 
-    fn BEQ(&mut self) -> u8 {
+    fn bit(&mut self) -> u8 {
         todo!()
     }
 
-    fn BIT(&mut self) -> u8 {
+    fn bmi(&mut self) -> u8 {
         todo!()
     }
 
-    fn BMI(&mut self) -> u8 {
+    fn bne(&mut self) -> u8 {
         todo!()
     }
 
-    fn BNE(&mut self) -> u8 {
+    fn bpl(&mut self) -> u8 {
         todo!()
     }
 
-    fn BPL(&mut self) -> u8 {
+    fn brk(&mut self) -> u8 {
         todo!()
     }
 
-    fn BRK(&mut self) -> u8 {
+    fn bvc(&mut self) -> u8 {
         todo!()
     }
 
-    fn BVC(&mut self) -> u8 {
+    fn bvs(&mut self) -> u8 {
         todo!()
     }
 
-    fn BVS(&mut self) -> u8 {
+    fn clc(&mut self) -> u8 {
+        self.set_flag(C, false);
+        0
+    }
+
+    fn cld(&mut self) -> u8 {
+        self.set_flag(D, false);
+        0
+    }
+
+    fn cli(&mut self) -> u8 {
+        self.set_flag(I, false);
+        0
+    }
+
+    fn clv(&mut self) -> u8 {
+        self.set_flag(V, false);
+        0
+    }
+
+    fn cmp(&mut self) -> u8 {
         todo!()
     }
 
-    fn CLC(&mut self) -> u8 {
+    fn cpx(&mut self) -> u8 {
         todo!()
     }
 
-    fn CLD(&mut self) -> u8 {
+    fn cpy(&mut self) -> u8 {
         todo!()
     }
 
-    fn CLI(&mut self) -> u8 {
+    fn dec(&mut self) -> u8 {
         todo!()
     }
 
-    fn CLV(&mut self) -> u8 {
+    fn dex(&mut self) -> u8 {
         todo!()
     }
 
-    fn CMP(&mut self) -> u8 {
+    fn dey(&mut self) -> u8 {
         todo!()
     }
 
-    fn CPX(&mut self) -> u8 {
+    fn eor(&mut self) -> u8 {
         todo!()
     }
 
-    fn CPY(&mut self) -> u8 {
+    fn inc(&mut self) -> u8 {
         todo!()
     }
 
-    fn DEC(&mut self) -> u8 {
+    fn inx(&mut self) -> u8 {
         todo!()
     }
 
-    fn DEX(&mut self) -> u8 {
+    fn iny(&mut self) -> u8 {
         todo!()
     }
 
-    fn DEY(&mut self) -> u8 {
+    fn jmp(&mut self) -> u8 {
         todo!()
     }
 
-    fn EOR(&mut self) -> u8 {
+    fn jsr(&mut self) -> u8 {
         todo!()
     }
 
-    fn INC(&mut self) -> u8 {
+    fn lda(&mut self) -> u8 {
         todo!()
     }
 
-    fn INX(&mut self) -> u8 {
+    fn ldx(&mut self) -> u8 {
         todo!()
     }
 
-    fn INY(&mut self) -> u8 {
+    fn ldy(&mut self) -> u8 {
         todo!()
     }
 
-    fn JMP(&mut self) -> u8 {
+    fn lsr(&mut self) -> u8 {
         todo!()
     }
 
-    fn JSR(&mut self) -> u8 {
+    fn nop(&mut self) -> u8 {
         todo!()
     }
 
-    fn LDA(&mut self) -> u8 {
+    fn ora(&mut self) -> u8 {
         todo!()
     }
 
-    fn LDX(&mut self) -> u8 {
+    fn pha(&mut self) -> u8 {
+        self.write(0x0100 + self.stack_ptr as u16, self.a);
+        self.stack_ptr -= 1;
+        0
+    }
+
+    fn php(&mut self) -> u8 {
         todo!()
     }
 
-    fn LDY(&mut self) -> u8 {
+    fn pla(&mut self) -> u8 {
         todo!()
     }
 
-    fn LSR(&mut self) -> u8 {
+    fn plp(&mut self) -> u8 {
         todo!()
     }
 
-    fn NOP(&mut self) -> u8 {
+    fn rol(&mut self) -> u8 {
         todo!()
     }
 
-    fn ORA(&mut self) -> u8 {
+    fn ror(&mut self) -> u8 {
         todo!()
     }
 
-    fn PHA(&mut self) -> u8 {
+    fn rti(&mut self) -> u8 {
+        self.stack_ptr += 1;
+        self.status = self.read(0x0100 + self.stack_ptr as u16);
+        self.status &= !(B as u8);
+        self.status &= !(U as u8);
+
+        self.stack_ptr += 1;
+        self.pc = self.read(0x0100 + self.stack_ptr as u16) as u16;
+        self.stack_ptr += 1;
+        self.pc |= (self.read(0x0100 + self.stack_ptr as u16) as u16) << 8;
+        0
+    }
+
+    fn rts(&mut self) -> u8 {
         todo!()
     }
 
-    fn PHP(&mut self) -> u8 {
+    fn sbc(&mut self) -> u8 {
+        self.fetch();
+        let value = (self.fetched as u16) ^ 0x00FF;
+        let temp = self.a as u16 + value + self.get_flag(C) as u16;
+        self.set_flag(C, temp > 255);
+        self.set_flag(Z, (temp & 0x80) != 0);
+        self.set_flag(
+            V,
+            (!(temp ^ self.a as u16) & (temp ^ value) & 0x0080) != 0,
+        );
+        self.set_flag(N, (temp & 0x0080) != 0);
+        self.a = (temp & 0x00FF) as u8;
+        1
+    }
+
+    fn sec(&mut self) -> u8 {
         todo!()
     }
 
-    fn PLA(&mut self) -> u8 {
+    fn sed(&mut self) -> u8 {
         todo!()
     }
 
-    fn PLP(&mut self) -> u8 {
+    fn sei(&mut self) -> u8 {
         todo!()
     }
 
-    fn ROL(&mut self) -> u8 {
+    fn sta(&mut self) -> u8 {
         todo!()
     }
 
-    fn ROR(&mut self) -> u8 {
+    fn stx(&mut self) -> u8 {
         todo!()
     }
 
-    fn RTI(&mut self) -> u8 {
+    fn sty(&mut self) -> u8 {
         todo!()
     }
 
-    fn RTS(&mut self) -> u8 {
+    fn tax(&mut self) -> u8 {
         todo!()
     }
 
-    fn SBC(&mut self) -> u8 {
+    fn tay(&mut self) -> u8 {
         todo!()
     }
 
-    fn SEC(&mut self) -> u8 {
+    fn tsx(&mut self) -> u8 {
         todo!()
     }
 
-    fn SED(&mut self) -> u8 {
+    fn txa(&mut self) -> u8 {
         todo!()
     }
 
-    fn SEI(&mut self) -> u8 {
+    fn txs(&mut self) -> u8 {
         todo!()
     }
 
-    fn STA(&mut self) -> u8 {
+    fn tya(&mut self) -> u8 {
         todo!()
     }
 
-    fn STX(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn STY(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TAX(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TAY(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TSX(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TXA(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TXS(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn TYA(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn IGL(&mut self) -> u8 {
+    fn igl(&mut self) -> u8 {
         todo!()
     }
 }

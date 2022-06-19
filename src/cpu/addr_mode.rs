@@ -32,7 +32,7 @@ pub trait AddressModes {
 }
 
 impl<'cpu> AddressModes for OLC6502<'cpu> {
-    fn imp (&mut self) -> u8 {
+    fn imp(&mut self) -> u8 {
         self.fetched = self.a;
         0
     }
@@ -122,9 +122,11 @@ impl<'cpu> AddressModes for OLC6502<'cpu> {
 
         let ptr = (ptr_high << 8) | ptr_low;
 
-        if ptr_low == 0x00FF { // Simulate page boundary hardware bug
+        if ptr_low == 0x00FF {
+            // Simulate page boundary hardware bug
             self.addr_abs = ((self.read(ptr & 0xFF00) as u16) << 8) | self.read(ptr) as u16;
-        } else { // Normal operation
+        } else {
+            // Normal operation
             self.addr_abs = ((self.read(ptr + 1) as u16) << 8) | self.read(ptr) as u16;
         }
 

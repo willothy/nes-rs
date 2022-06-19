@@ -1,10 +1,15 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::Bus, cpu::{addr_mode::{AddrMode, AddressModes}, opcode::OpCode},
+    bus::Bus,
+    cpu::{
+        addr_mode::{AddrMode, AddressModes},
+        opcode::OpCode,
+    },
 };
 
 use super::instruction::*;
+use StatusFlags::*;
 
 pub enum StatusFlags {
     C = (1 << 0), // Carry bit
@@ -18,18 +23,18 @@ pub enum StatusFlags {
 }
 
 pub struct OLC6502<'cpu> {
-    pub(in super) bus: &'cpu mut Bus<'cpu>,
-    pub(in super) status: u8,
-    pub(in super) stack_ptr: u8,
-    pub(in super) pc: u16,
-    pub(in super) a: u8,
-    pub(in super) x: u8,
-    pub(in super) y: u8,
-    pub(in super) fetched: u8,
-    pub(in super) addr_abs: u16,
-    pub(in super) addr_rel: u8,
-    pub(in super) opcode: u8,
-    pub(in super) cycles: u8,
+    pub(super) bus: &'cpu mut Bus<'cpu>,
+    pub(super) status: u8,
+    pub(super) stack_ptr: u8,
+    pub(super) pc: u16,
+    pub(super) a: u8,
+    pub(super) x: u8,
+    pub(super) y: u8,
+    pub(super) fetched: u8,
+    pub(super) addr_abs: u16,
+    pub(super) addr_rel: u8,
+    pub(super) opcode: u8,
+    pub(super) cycles: u8,
 }
 
 impl Display for OLC6502<'_> {
@@ -77,8 +82,8 @@ impl<'cpu> OLC6502<'cpu> {
     pub fn operate(&mut self, opcode: OpCode) -> u8 {
         use OpCode::*;
         match opcode {
-            IGL => {0}
-            _ => {0}
+            IGL => 0,
+            _ => 0,
         }
     }
 
@@ -125,10 +130,64 @@ impl<'cpu> OLC6502<'cpu> {
         self.cycles -= 1;
     }
 
-    pub fn reset() {}
+    pub fn reset(&mut self) {
+        self.a = 0x00;
+        self.x = 0x00;
+        self.y = 0x00;
+        self.stack_ptr = 0xFD;
+        self.status = 0x00 | U as u8;
 
-    pub fn irq() {}
+        self.addr_abs = 0xFFFC;
+        let low = self.read(self.addr_abs);
+        let high = self.read(self.addr_abs + 1);
+        self.pc = (high as u16) << 8 | low as u16;
 
-    pub fn nmi() {}
+        self.addr_abs = 0x0000;
+        self.addr_rel = 0x0000;
+        self.fetched = 0x00;
+
+        self.cycles = 8;
+    }
+
+    pub fn irq(&mut self) {
+        if !self.get_flag(I) {
+            self.write(0x0100 + self.stack_ptr as u16, ((self.pc >> 8) & 0x00FF) as u8);
+            self.stack_ptr -= 1;
+            self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
+            self.stack_ptr -= 1;
+
+            self.set_flag(B, false);
+            self.set_flag(U, true);
+            self.set_flag(I, true);
+            self.write(0x0100 + self.stack_ptr as u16, self.status);
+            self.stack_ptr -= 1;
+
+            self.addr_abs = 0xFFFE;
+            let low = self.read(self.addr_abs) as u16;
+            let high = self.read(self.addr_abs + 1) as u16;
+            self.pc = (high << 8) | low;
+
+            self.cycles = 7;
+        }
+    }
+
+    pub fn nmi(&mut self) {
+        self.write(0x0100 + self.stack_ptr as u16, ((self.pc >> 8) & 0x00FF) as u8);
+        self.stack_ptr -= 1;
+        self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
+        self.stack_ptr -= 1;
+
+        self.set_flag(B, false);
+        self.set_flag(U, true);
+        self.set_flag(I, true);
+        self.write(0x0100 + self.stack_ptr as u16, self.status);
+        self.stack_ptr -= 1;
+
+        self.addr_abs = 0xFFFA;
+        let low = self.read(self.addr_abs) as u16;
+        let high = self.read(self.addr_abs + 1) as u16;
+        self.pc = (high << 8) | low;
+
+        self.cycles = 8;
+    }
 }
-
