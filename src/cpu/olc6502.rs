@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::Bus,
+    bus::Bus, cpu::{addr_mode::{AddrMode, AddressModes}, opcode::OpCode},
 };
 
 use super::instruction::*;
@@ -18,18 +18,18 @@ pub enum StatusFlags {
 }
 
 pub struct OLC6502<'cpu> {
-    bus: &'cpu mut Bus<'cpu>,
-    status: u8,
-    stack_ptr: u8,
-    pc: u16,
-    a: u8,
-    x: u8,
-    y: u8,
-    fetched: u8,
-    addr_abs: u16,
-    addr_rel: u8,
-    opcode: u8,
-    cycles: u8,
+    pub(in super) bus: &'cpu mut Bus<'cpu>,
+    pub(in super) status: u8,
+    pub(in super) stack_ptr: u8,
+    pub(in super) pc: u16,
+    pub(in super) a: u8,
+    pub(in super) x: u8,
+    pub(in super) y: u8,
+    pub(in super) fetched: u8,
+    pub(in super) addr_abs: u16,
+    pub(in super) addr_rel: u8,
+    pub(in super) opcode: u8,
+    pub(in super) cycles: u8,
 }
 
 impl Display for OLC6502<'_> {
@@ -56,7 +56,7 @@ impl<'cpu> OLC6502<'cpu> {
         }
     }
 
-    pub fn addr_mode(&mut self, addr_mode: AddrMode) -> bool {
+    pub fn addr_mode(&mut self, addr_mode: AddrMode) -> u8 {
         use AddrMode::*;
         match addr_mode {
             IMP => self.imp(),
@@ -74,16 +74,24 @@ impl<'cpu> OLC6502<'cpu> {
         }
     }
 
-    pub fn operate(&mut self, opcode: OpCode) {
+    pub fn operate(&mut self, opcode: OpCode) -> u8 {
         use OpCode::*;
         match opcode {
-            IGL => {}
-            _ => {}
+            IGL => {0}
+            _ => {0}
         }
     }
 
     pub fn get_flag(&self, flag: StatusFlags) -> bool {
         self.status & flag as u8 != 0
+    }
+
+    pub fn set_flag(&mut self, flag: StatusFlags, value: bool) {
+        if value {
+            self.status |= flag as u8;
+        } else {
+            self.status &= !(flag as u8);
+        }
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -94,7 +102,12 @@ impl<'cpu> OLC6502<'cpu> {
         self.bus.write(addr, val);
     }
 
-    pub fn fetch(&mut self) {}
+    pub fn fetch(&mut self) -> u8 {
+        if !(Instruction::from(self.opcode).addr_mode == AddrMode::IMP) {
+            self.fetched = self.read(self.addr_abs);
+        }
+        self.fetched
+    }
 
     pub fn clock(&mut self) {
         if self.cycles == 0 {
@@ -103,9 +116,13 @@ impl<'cpu> OLC6502<'cpu> {
 
             let inst = Instruction::from(self.opcode);
             self.cycles = inst.cycles;
-            self.addr_mode(inst.addr_mode);
-            self.operate(inst.opcode);
+            let mut additional_cycles = 0;
+            additional_cycles += self.addr_mode(inst.addr_mode);
+            additional_cycles += self.operate(inst.opcode);
+
+            self.cycles += additional_cycles;
         }
+        self.cycles -= 1;
     }
 
     pub fn reset() {}
@@ -115,162 +132,3 @@ impl<'cpu> OLC6502<'cpu> {
     pub fn nmi() {}
 }
 
-pub enum AddrMode {
-    IMP,
-    IMM,
-    ZP0,
-    ZPX,
-    ZPY,
-    REL,
-    ABS,
-    ABX,
-    ABY,
-    IND,
-    IZX,
-    IZY,
-}
-
-pub trait AddressModes {
-    fn imp(&mut self) -> bool;
-    fn imm(&mut self) -> bool;
-    fn zp0(&mut self) -> bool;
-    fn zpx(&mut self) -> bool;
-    fn zpy(&mut self) -> bool;
-    fn rel(&mut self) -> bool;
-    fn abs(&mut self) -> bool;
-    fn abx(&mut self) -> bool;
-    fn aby(&mut self) -> bool;
-    fn ind(&mut self) -> bool;
-    fn izx(&mut self) -> bool;
-    fn izy(&mut self) -> bool;
-}
-
-impl<'cpu> AddressModes for OLC6502<'cpu> {
-    fn imp (&mut self) -> bool {
-        self.fetched = self.a;
-        false
-    }
-
-    fn imm(&mut self) -> bool {
-        self.pc += 1;
-        self.addr_abs = self.pc;
-        false
-    }
-
-    fn zp0(&mut self) -> bool {
-        self.addr_abs = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
-        false
-    }
-
-    fn zpx(&mut self) -> bool {
-        self.addr_abs = self.read(self.pc + self.x as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
-        false
-    }
-
-    fn zpy(&mut self) -> bool {
-        self.addr_abs = self.read(self.pc + self.y as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
-        false
-    }
-
-    fn rel(&mut self) -> bool {
-        self.addr_rel = self.read(self.pc as u16);
-        self.pc += 1;
-        if (self.addr_rel & 0x80) != 0x0 {
-            self.addr_rel |= 0xFF;
-        }
-        false
-    }
-
-    fn abs(&mut self) -> bool {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = ((high) << 8) | low;
-
-        false
-    }
-
-    fn abx(&mut self) -> bool {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = (((high) << 8) | low) + self.x as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn aby(&mut self) -> bool {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = (((high) << 8) | low) + self.y as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn ind(&mut self) -> bool {
-        let ptr_low = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let ptr_high = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let ptr = (ptr_high << 8) | ptr_low;
-
-        if ptr_low == 0x00FF { // Simulate page boundary hardware bug
-            self.addr_abs = ((self.read(ptr & 0xFF00) as u16) << 8) | self.read(ptr) as u16;
-        } else { // Normal operation
-            self.addr_abs = ((self.read(ptr + 1) as u16) << 8) | self.read(ptr) as u16;
-        }
-
-        false
-    }
-
-    fn izx(&mut self) -> bool {
-        let t: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let low = self.read(t + self.x as u16) as u16 & 0x00FF;
-        let high = self.read(t + self.x as u16 + 1) as u16 & 0x00FF;
-
-        self.addr_abs = (high << 8) | low;
-
-        false
-    }
-
-    fn izy(&mut self) -> bool {
-        let t: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let low = self.read(t & 0x00FF) as u16;
-        let high = self.read((t + 1) & 0x00FF) as u16;
-
-        self.addr_abs = (high << 8) | low;
-        self.addr_abs += self.y as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            true
-        } else {
-            false
-        }
-    }
-}
