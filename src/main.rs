@@ -1,12 +1,12 @@
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
 use self::cpu::OLC6502;
 
 mod bus;
+mod cartridge;
 mod cpu;
 mod memory;
 mod ppu;
-mod cartridge;
 
 fn main() {
     let bus = Rc::new(RefCell::new(bus::Bus::new()));

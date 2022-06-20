@@ -1,6 +1,12 @@
-use std::{fmt::Display, ptr::null_mut, rc::{Rc, Weak}, cell::RefCell, borrow::BorrowMut};
+use std::{
+    borrow::BorrowMut,
+    cell::RefCell,
+    fmt::Display,
+    ptr::null_mut,
+    rc::{Rc, Weak},
+};
 
-use crate::{cartridge::Cartridge, cpu::OLC6502, ppu::OLC2C02, memory::RAM};
+use crate::{cartridge::Cartridge, cpu::OLC6502, memory::RAM, ppu::OLC2C02};
 
 pub trait Device: std::fmt::Display {
     fn in_addr_space(&self, addr: u16) -> bool;
@@ -27,38 +33,16 @@ impl Devices {
                 self.cartridge.clone(),
                 self.ppu.clone(),
                 self.memory.clone(),
-            ]
-        }
-    }
-
-    pub fn iter_mut(&mut self) -> DeviceIterMut {
-        DeviceIterMut {
-            devices: vec![
-                self.cartridge.clone(),
-                self.ppu.clone(),
-                self.memory.clone(),
-            ]
+            ],
         }
     }
 }
 
 pub struct DeviceIter {
-    devices: Vec<Rc<RefCell<dyn Device>>>
+    devices: Vec<Rc<RefCell<dyn Device>>>,
 }
 
 impl Iterator for DeviceIter {
-    type Item = Rc<RefCell<dyn Device>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.devices.pop()
-    }
-}
-
-pub struct DeviceIterMut {
-    devices: Vec<Rc<RefCell<dyn Device>>>
-}
-
-impl Iterator for DeviceIterMut {
     type Item = Rc<RefCell<dyn Device>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -88,7 +72,7 @@ impl Display for Bus {
 
 impl Bus {
     pub fn new() -> Bus {
-        let cartridge = Rc::new(RefCell::new(Cartridge::new()));
+        let cartridge = Rc::new(RefCell::new(Cartridge::new("".to_string())));
         let ppu = Rc::new(RefCell::new(OLC2C02::new(cartridge.clone())));
         let bus = Bus {
             devices: Devices {
@@ -97,7 +81,7 @@ impl Bus {
                 cartridge,
             },
             clock_counter: 0,
-            cpu: Weak::new()
+            cpu: Weak::new(),
         };
         bus
     }
@@ -116,7 +100,7 @@ impl Bus {
     }
 
     pub fn cpu_write(&mut self, addr: u16, val: u8) {
-        for device in self.devices.iter_mut() {
+        for device in self.devices.iter() {
             if device.borrow().in_addr_space(addr) {
                 (*device).borrow_mut().write(addr, val);
                 return;
@@ -132,7 +116,5 @@ impl Bus {
         self.clock_counter = 0;
     }
 
-    pub fn clock(&mut self) {
-
-    }
+    pub fn clock(&mut self) {}
 }

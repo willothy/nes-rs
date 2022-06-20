@@ -1,26 +1,24 @@
-use std::{fmt::Display, ptr::null_mut, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, fmt::Display, ptr::null_mut, rc::Rc};
 
 use crate::{bus::Device, cartridge::Cartridge};
 
 #[derive(Debug)]
 pub struct OLC2C02 {
-    cartridge: Rc<RefCell<Cartridge>>
+    cartridge: Rc<RefCell<Cartridge>>,
+    name_table: [[u8; 1024]; 2],
+    palette_table: [u8; 32],
 }
 
 impl OLC2C02 {
     pub fn new(cartridge: Rc<RefCell<Cartridge>>) -> OLC2C02 {
         OLC2C02 {
-            cartridge
+            cartridge,
+            name_table: [[0; 1024]; 2],
+            palette_table: [0; 32],
         }
     }
 
-    pub fn connect_cartridge(&mut self, cartridge: Rc<RefCell<Cartridge>>) {
-        self.cartridge = cartridge;
-    }
-
-    pub fn clock(&mut self) {
-
-    }
+    pub fn clock(&mut self) {}
 
     // PPU bus
     pub fn ppu_read(&self, addr: u16, readonly: bool) -> u8 {
@@ -52,5 +50,4 @@ impl Device for OLC2C02 {
     fn write(&mut self, addr: u16, val: u8) {
         let addr = addr & 0x0007;
     }
-
 }

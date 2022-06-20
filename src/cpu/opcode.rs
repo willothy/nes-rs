@@ -341,10 +341,7 @@ impl Operations for OLC6502 {
         let temp = self.a as u16 + value + self.get_flag(C) as u16;
         self.set_flag(C, temp > 255);
         self.set_flag(Z, (temp & 0x80) != 0);
-        self.set_flag(
-            V,
-            (!(temp ^ self.a as u16) & (temp ^ value) & 0x0080) != 0,
-        );
+        self.set_flag(V, (!(temp ^ self.a as u16) & (temp ^ value) & 0x0080) != 0);
         self.set_flag(N, (temp & 0x0080) != 0);
         self.a = (temp & 0x00FF) as u8;
         1

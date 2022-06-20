@@ -7,7 +7,6 @@ pub struct RAM {
     data: [u8; 2048],
 }
 
-
 impl Display for RAM {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let mut res = String::new();
@@ -27,7 +26,6 @@ impl RAM {
 }
 
 impl Device for RAM {
-
     fn read(&self, addr: u16, _readonly: bool) -> u8 {
         self.data[(addr & 0x07FF) as usize]
     }
@@ -39,5 +37,4 @@ impl Device for RAM {
     fn in_addr_space(&self, addr: u16) -> bool {
         addr <= 0x1FFF
     }
-
 }

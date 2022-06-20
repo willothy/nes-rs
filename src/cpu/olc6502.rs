@@ -1,11 +1,12 @@
-use std::{fmt::Display, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     bus::Bus,
     cpu::{
         addr_mode::{AddrMode, AddressModes},
         opcode::OpCode,
-    }, ppu::OLC2C02,
+    },
+    ppu::OLC2C02,
 };
 
 use super::instruction::*;
@@ -152,7 +153,10 @@ impl OLC6502 {
 
     pub fn irq(&mut self) {
         if !self.get_flag(I) {
-            self.write(0x0100 + self.stack_ptr as u16, ((self.pc >> 8) & 0x00FF) as u8);
+            self.write(
+                0x0100 + self.stack_ptr as u16,
+                ((self.pc >> 8) & 0x00FF) as u8,
+            );
             self.stack_ptr -= 1;
             self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
             self.stack_ptr -= 1;
@@ -173,7 +177,10 @@ impl OLC6502 {
     }
 
     pub fn nmi(&mut self) {
-        self.write(0x0100 + self.stack_ptr as u16, ((self.pc >> 8) & 0x00FF) as u8);
+        self.write(
+            0x0100 + self.stack_ptr as u16,
+            ((self.pc >> 8) & 0x00FF) as u8,
+        );
         self.stack_ptr -= 1;
         self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
         self.stack_ptr -= 1;
