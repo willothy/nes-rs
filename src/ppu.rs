@@ -43,8 +43,7 @@ impl Device for OLC2C02 {
     }
 
     fn read(&self, addr: u16, readonly: bool) -> u8 {
-        let addr = addr & 0x0007;
-        todo!()
+        0x00
     }
 
     fn write(&mut self, addr: u16, val: u8) {

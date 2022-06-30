@@ -1,8 +1,9 @@
 use crate::cpu::StatusFlags;
 use StatusFlags::*;
 
-use super::OLC6502;
+use super::{OLC6502, addr_mode::AddrMode, instruction::Instruction};
 
+/* #[allow(unused)]
 pub enum OpCode {
     ADC,
     AND,
@@ -61,341 +62,285 @@ pub enum OpCode {
     TXS,
     TYA,
     IGL,
+} */
+
+
+
+
+pub fn adc(cpu: &mut OLC6502) -> u8 {
+    cpu.fetch();
+    let temp = cpu.registers.a as u16 + cpu.fetched as u16 + cpu.get_flag(C) as u16;
+    cpu.set_flag(C, temp > 255);
+    cpu.set_flag(Z, (temp & 0x80) != 0);
+    cpu.set_flag(
+        V,
+        (!(cpu.registers.a as u16 ^ cpu.fetched as u16) & (cpu.registers.a as u16 ^ temp as u16) & 0x0080) != 0,
+    );
+    cpu.set_flag(N, (temp & 0x80) != 0);
+    cpu.registers.a = (temp & 0x00FF) as u8;
+    1
 }
 
-pub trait Operations {
-    fn adc(&mut self) -> u8;
-    fn and(&mut self) -> u8;
-    fn asl(&mut self) -> u8;
-    fn bcc(&mut self) -> u8;
-    fn bcs(&mut self) -> u8;
-    fn beq(&mut self) -> u8;
-    fn bit(&mut self) -> u8;
-    fn bmi(&mut self) -> u8;
-    fn bne(&mut self) -> u8;
-    fn bpl(&mut self) -> u8;
-    fn brk(&mut self) -> u8;
-    fn bvc(&mut self) -> u8;
-    fn bvs(&mut self) -> u8;
-    fn clc(&mut self) -> u8;
-    fn cld(&mut self) -> u8;
-    fn cli(&mut self) -> u8;
-    fn clv(&mut self) -> u8;
-    fn cmp(&mut self) -> u8;
-    fn cpx(&mut self) -> u8;
-    fn cpy(&mut self) -> u8;
-    fn dec(&mut self) -> u8;
-    fn dex(&mut self) -> u8;
-    fn dey(&mut self) -> u8;
-    fn eor(&mut self) -> u8;
-    fn inc(&mut self) -> u8;
-    fn inx(&mut self) -> u8;
-    fn iny(&mut self) -> u8;
-    fn jmp(&mut self) -> u8;
-    fn jsr(&mut self) -> u8;
-    fn lda(&mut self) -> u8;
-    fn ldx(&mut self) -> u8;
-    fn ldy(&mut self) -> u8;
-    fn lsr(&mut self) -> u8;
-    fn nop(&mut self) -> u8;
-    fn ora(&mut self) -> u8;
-    fn pha(&mut self) -> u8;
-    fn php(&mut self) -> u8;
-    fn pla(&mut self) -> u8;
-    fn plp(&mut self) -> u8;
-    fn rol(&mut self) -> u8;
-    fn ror(&mut self) -> u8;
-    fn rti(&mut self) -> u8;
-    fn rts(&mut self) -> u8;
-    fn sbc(&mut self) -> u8;
-    fn sec(&mut self) -> u8;
-    fn sed(&mut self) -> u8;
-    fn sei(&mut self) -> u8;
-    fn sta(&mut self) -> u8;
-    fn stx(&mut self) -> u8;
-    fn sty(&mut self) -> u8;
-    fn tax(&mut self) -> u8;
-    fn tay(&mut self) -> u8;
-    fn tsx(&mut self) -> u8;
-    fn txa(&mut self) -> u8;
-    fn txs(&mut self) -> u8;
-    fn tya(&mut self) -> u8;
-    fn igl(&mut self) -> u8;
+pub fn and(cpu: &mut OLC6502) -> u8 {
+    cpu.fetch();
+    cpu.registers.a = cpu.registers.a & cpu.fetched;
+    cpu.set_flag(Z, cpu.registers.a == 0x00);
+    cpu.set_flag(N, (cpu.registers.a & 0x80) != 0);
+    1
 }
 
-impl Operations for OLC6502 {
-    fn adc(&mut self) -> u8 {
-        self.fetch();
-        let temp = self.a as u16 + self.fetched as u16 + self.get_flag(C) as u16;
-        self.set_flag(C, temp > 255);
-        self.set_flag(Z, (temp & 0x80) != 0);
-        self.set_flag(
-            V,
-            (!(self.a as u16 ^ self.fetched as u16) & (self.a as u16 ^ temp as u16) & 0x0080) != 0,
-        );
-        self.set_flag(N, (temp & 0x80) != 0);
-        self.a = (temp & 0x00FF) as u8;
-        1
-    }
+pub fn asl(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn and(&mut self) -> u8 {
-        self.fetch();
-        self.a = self.a & self.fetched;
-        self.set_flag(Z, self.a == 0x00);
-        self.set_flag(N, (self.a & 0x80) != 0);
-        1
-    }
+pub fn bcc(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn asl(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bcs(cpu: &mut OLC6502) -> u8 {
+    if cpu.get_flag(C) == true {
+        cpu.cycles += 1;
+        cpu.addr_abs = cpu.pc + cpu.addr_rel as u16;
 
-    fn bcc(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn bcs(&mut self) -> u8 {
-        if self.get_flag(C) == true {
-            self.cycles += 1;
-            self.addr_abs = self.pc + self.addr_rel as u16;
-
-            if (self.addr_abs & 0xFF00) != (self.pc & 0xFF00) {
-                self.cycles += 1;
-            }
-
-            self.pc = self.addr_abs;
+        if (cpu.addr_abs & 0xFF00) != (cpu.pc & 0xFF00) {
+            cpu.cycles += 1;
         }
-        0
-    }
 
-    fn beq(&mut self) -> u8 {
-        todo!()
+        cpu.pc = cpu.addr_abs;
     }
+    0
+}
 
-    fn bit(&mut self) -> u8 {
-        todo!()
-    }
+pub fn beq(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn bmi(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bit(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn bne(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bmi(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn bpl(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bne(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn brk(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bpl(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn bvc(&mut self) -> u8 {
-        todo!()
-    }
+pub fn brk(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn bvs(&mut self) -> u8 {
-        todo!()
-    }
+pub fn bvc(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn clc(&mut self) -> u8 {
-        self.set_flag(C, false);
-        0
-    }
+pub fn bvs(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn cld(&mut self) -> u8 {
-        self.set_flag(D, false);
-        0
-    }
+pub fn clc(cpu: &mut OLC6502) -> u8 {
+    cpu.set_flag(C, false);
+    0
+}
 
-    fn cli(&mut self) -> u8 {
-        self.set_flag(I, false);
-        0
-    }
+pub fn cld(cpu: &mut OLC6502) -> u8 {
+    cpu.set_flag(D, false);
+    0
+}
 
-    fn clv(&mut self) -> u8 {
-        self.set_flag(V, false);
-        0
-    }
+pub fn cli(cpu: &mut OLC6502) -> u8 {
+    cpu.set_flag(I, false);
+    0
+}
 
-    fn cmp(&mut self) -> u8 {
-        todo!()
-    }
+pub fn clv(cpu: &mut OLC6502) -> u8 {
+    cpu.set_flag(V, false);
+    0
+}
 
-    fn cpx(&mut self) -> u8 {
-        todo!()
-    }
+pub fn cmp(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn cpy(&mut self) -> u8 {
-        todo!()
-    }
+pub fn cpx(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn dec(&mut self) -> u8 {
-        todo!()
-    }
+pub fn cpy(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn dex(&mut self) -> u8 {
-        todo!()
-    }
+pub fn dec(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn dey(&mut self) -> u8 {
-        todo!()
-    }
+pub fn dex(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn eor(&mut self) -> u8 {
-        todo!()
-    }
+pub fn dey(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn inc(&mut self) -> u8 {
-        todo!()
-    }
+pub fn eor(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn inx(&mut self) -> u8 {
-        todo!()
-    }
+pub fn inc(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn iny(&mut self) -> u8 {
-        todo!()
-    }
+pub fn inx(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn jmp(&mut self) -> u8 {
-        todo!()
-    }
+pub fn iny(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn jsr(&mut self) -> u8 {
-        todo!()
-    }
+pub fn jmp(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn lda(&mut self) -> u8 {
-        todo!()
-    }
+pub fn jsr(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn ldx(&mut self) -> u8 {
-        todo!()
-    }
+pub fn lda(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn ldy(&mut self) -> u8 {
-        todo!()
-    }
+pub fn ldx(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn lsr(&mut self) -> u8 {
-        todo!()
-    }
+pub fn ldy(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn nop(&mut self) -> u8 {
-        todo!()
-    }
+pub fn lsr(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn ora(&mut self) -> u8 {
-        todo!()
-    }
+pub fn nop(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn pha(&mut self) -> u8 {
-        self.write(0x0100 + self.stack_ptr as u16, self.a);
-        self.stack_ptr -= 1;
-        0
-    }
+pub fn ora(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn php(&mut self) -> u8 {
-        todo!()
-    }
+pub fn pha(cpu: &mut OLC6502) -> u8 {
+    cpu.write(0x0100 + cpu.sp as u16, cpu.registers.a);
+    cpu.sp -= 1;
+    0
+}
 
-    fn pla(&mut self) -> u8 {
-        todo!()
-    }
+pub fn php(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn plp(&mut self) -> u8 {
-        todo!()
-    }
+pub fn pla(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn rol(&mut self) -> u8 {
-        todo!()
-    }
+pub fn plp(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn ror(&mut self) -> u8 {
-        todo!()
-    }
+pub fn rol(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn rti(&mut self) -> u8 {
-        self.stack_ptr += 1;
-        self.status = self.read(0x0100 + self.stack_ptr as u16);
-        self.status &= !(B as u8);
-        self.status &= !(U as u8);
+pub fn ror(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-        self.stack_ptr += 1;
-        self.pc = self.read(0x0100 + self.stack_ptr as u16) as u16;
-        self.stack_ptr += 1;
-        self.pc |= (self.read(0x0100 + self.stack_ptr as u16) as u16) << 8;
-        0
-    }
+pub fn rti(cpu: &mut OLC6502) -> u8 {
+    cpu.sp += 1;
+    cpu.st = cpu.read(0x0100 + cpu.sp as u16);
+    cpu.st &= !(B as u8);
+    cpu.st &= !(U as u8);
 
-    fn rts(&mut self) -> u8 {
-        todo!()
-    }
+    cpu.sp += 1;
+    cpu.pc = cpu.read(0x0100 + cpu.sp as u16) as u16;
+    cpu.sp += 1;
+    cpu.pc |= (cpu.read(0x0100 + cpu.sp as u16) as u16) << 8;
+    0
+}
 
-    fn sbc(&mut self) -> u8 {
-        self.fetch();
-        let value = (self.fetched as u16) ^ 0x00FF;
-        let temp = self.a as u16 + value + self.get_flag(C) as u16;
-        self.set_flag(C, temp > 255);
-        self.set_flag(Z, (temp & 0x80) != 0);
-        self.set_flag(V, (!(temp ^ self.a as u16) & (temp ^ value) & 0x0080) != 0);
-        self.set_flag(N, (temp & 0x0080) != 0);
-        self.a = (temp & 0x00FF) as u8;
-        1
-    }
+pub fn rts(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn sec(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sbc(cpu: &mut OLC6502) -> u8 {
+    cpu.fetch();
+    let value = (cpu.fetched as u16) ^ 0x00FF;
+    let temp = cpu.registers.a as u16 + value + cpu.get_flag(C) as u16;
+    cpu.set_flag(C, temp > 255);
+    cpu.set_flag(Z, (temp & 0x80) != 0);
+    cpu.set_flag(V, (!(temp ^ cpu.registers.a as u16) & (temp ^ value) & 0x0080) != 0);
+    cpu.set_flag(N, (temp & 0x0080) != 0);
+    cpu.registers.a = (temp & 0x00FF) as u8;
+    1
+}
 
-    fn sed(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sec(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn sei(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sed(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn sta(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sei(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn stx(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sta(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn sty(&mut self) -> u8 {
-        todo!()
-    }
+pub fn stx(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn tax(&mut self) -> u8 {
-        todo!()
-    }
+pub fn sty(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn tay(&mut self) -> u8 {
-        todo!()
-    }
+pub fn tax(cpu: &mut OLC6502) -> u8 {
+    cpu.registers.x = cpu.registers.a;
+    cpu.set_flag(Z, cpu.registers.x != 0);
+    cpu.set_flag(N, cpu.registers.x & 0b10000000 != 0);
+    0x00
+}
 
-    fn tsx(&mut self) -> u8 {
-        todo!()
-    }
+pub fn tay(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn txa(&mut self) -> u8 {
-        todo!()
-    }
+pub fn tsx(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn txs(&mut self) -> u8 {
-        todo!()
-    }
+pub fn txa(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn tya(&mut self) -> u8 {
-        todo!()
-    }
+pub fn txs(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
 
-    fn igl(&mut self) -> u8 {
-        todo!()
-    }
+pub fn tya(cpu: &mut OLC6502) -> u8 {
+    todo!()
+}
+
+pub fn igl(cpu: &mut OLC6502) -> u8 {
+    todo!()
 }

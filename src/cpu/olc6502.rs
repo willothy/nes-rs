@@ -3,13 +3,13 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use crate::{
     bus::Bus,
     cpu::{
-        addr_mode::{AddrMode, AddressModes},
-        opcode::OpCode,
+        addr_mode::{AddrMode, self},
+        //opcode::OpCode,
     },
     ppu::OLC2C02,
 };
 
-use super::instruction::*;
+use super::{instruction::*, opcode};
 use StatusFlags::*;
 
 pub enum StatusFlags {
@@ -23,14 +23,18 @@ pub enum StatusFlags {
     N = (1 << 7), // Negative
 }
 
-pub struct OLC6502 {
-    pub(crate) bus: Rc<RefCell<Bus>>,
-    pub(super) status: u8,
-    pub(super) stack_ptr: u8,
-    pub(super) pc: u16,
+pub struct Registers {
     pub(super) a: u8,
     pub(super) x: u8,
-    pub(super) y: u8,
+    pub(super) y: u8
+}
+
+pub struct OLC6502 {
+    pub(crate) bus: Rc<RefCell<Bus>>,
+    pub(super) st: u8,
+    pub(super) sp: u8,
+    pub(super) pc: u16,
+    pub(super) registers: Registers,
     pub(super) fetched: u8,
     pub(super) addr_abs: u16,
     pub(super) addr_rel: u8,
@@ -48,12 +52,14 @@ impl OLC6502 {
     pub fn new(bus: Rc<RefCell<Bus>>) -> OLC6502 {
         let mut cpu = OLC6502 {
             bus,
-            status: 0x00,
-            stack_ptr: 0x00,
+            st: 0x00,
+            sp: 0x00,
             pc: 0x0000,
-            a: 0x00,
-            x: 0x00,
-            y: 0x00,
+            registers: Registers {
+                a: 0x00,
+                x: 0x00,
+                y: 0x00,
+            },
             fetched: 0x00,
             addr_abs: 0x0000,
             addr_rel: 0x00,
@@ -64,40 +70,39 @@ impl OLC6502 {
     }
 
     pub fn addr_mode(&mut self, addr_mode: AddrMode) -> u8 {
-        use AddrMode::*;
         match addr_mode {
-            IMP => self.imp(),
-            IMM => self.imm(),
-            ZP0 => self.zp0(),
-            ZPX => self.zpx(),
-            ZPY => self.zpy(),
-            REL => self.rel(),
-            ABS => self.abs(),
-            ABX => self.abx(),
-            ABY => self.aby(),
-            IND => self.ind(),
-            IZX => self.izx(),
-            IZY => self.izy(),
+            IMP => addr_mode::imp(self),
+            IMM => addr_mode::imm(self),
+            ZP0 => addr_mode::zp0(self),
+            ZPX => addr_mode::zpx(self),
+            ZPY => addr_mode::zpy(self),
+            REL => addr_mode::rel(self),
+            ABS => addr_mode::abs(self),
+            ABX => addr_mode::abx(self),
+            ABY => addr_mode::aby(self),
+            IND => addr_mode::ind(self),
+            IZX => addr_mode::izx(self),
+            IZY => addr_mode::izy(self),
         }
     }
 
-    pub fn operate(&mut self, opcode: OpCode) -> u8 {
-        use OpCode::*;
-        match opcode {
-            IGL => 0,
-            _ => 0,
-        }
+    pub fn test(&mut self) {
+        self.operate(opcode::tax);
+    }
+
+    pub fn operate(&mut self, opcode: fn(&mut Self) -> u8) -> u8 {
+        opcode(self)
     }
 
     pub fn get_flag(&self, flag: StatusFlags) -> bool {
-        self.status & flag as u8 != 0
+        self.st & flag as u8 != 0
     }
 
     pub fn set_flag(&mut self, flag: StatusFlags, value: bool) {
         if value {
-            self.status |= flag as u8;
+            self.st |= flag as u8;
         } else {
-            self.status &= !(flag as u8);
+            self.st &= !(flag as u8);
         }
     }
 
@@ -133,11 +138,11 @@ impl OLC6502 {
     }
 
     pub fn reset(&mut self) {
-        self.a = 0x00;
-        self.x = 0x00;
-        self.y = 0x00;
-        self.stack_ptr = 0xFD;
-        self.status = 0x00 | U as u8;
+        self.registers.a = 0x00;
+        self.registers.x = 0x00;
+        self.registers.y = 0x00;
+        self.sp = 0xFD;
+        self.st = 0x00 | U as u8;
 
         self.addr_abs = 0xFFFC;
         let low = self.read(self.addr_abs);
@@ -154,18 +159,18 @@ impl OLC6502 {
     pub fn irq(&mut self) {
         if !self.get_flag(I) {
             self.write(
-                0x0100 + self.stack_ptr as u16,
+                0x0100 + self.sp as u16,
                 ((self.pc >> 8) & 0x00FF) as u8,
             );
-            self.stack_ptr -= 1;
-            self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
-            self.stack_ptr -= 1;
+            self.sp -= 1;
+            self.write(0x0100 + self.sp as u16, (self.pc & 0x00FF) as u8);
+            self.sp -= 1;
 
             self.set_flag(B, false);
             self.set_flag(U, true);
             self.set_flag(I, true);
-            self.write(0x0100 + self.stack_ptr as u16, self.status);
-            self.stack_ptr -= 1;
+            self.write(0x0100 + self.sp as u16, self.st);
+            self.sp -= 1;
 
             self.addr_abs = 0xFFFE;
             let low = self.read(self.addr_abs) as u16;
@@ -178,18 +183,18 @@ impl OLC6502 {
 
     pub fn nmi(&mut self) {
         self.write(
-            0x0100 + self.stack_ptr as u16,
+            0x0100 + self.sp as u16,
             ((self.pc >> 8) & 0x00FF) as u8,
         );
-        self.stack_ptr -= 1;
-        self.write(0x0100 + self.stack_ptr as u16, (self.pc & 0x00FF) as u8);
-        self.stack_ptr -= 1;
+        self.sp -= 1;
+        self.write(0x0100 + self.sp as u16, (self.pc & 0x00FF) as u8);
+        self.sp -= 1;
 
         self.set_flag(B, false);
         self.set_flag(U, true);
         self.set_flag(I, true);
-        self.write(0x0100 + self.stack_ptr as u16, self.status);
-        self.stack_ptr -= 1;
+        self.write(0x0100 + self.sp as u16, self.st);
+        self.sp -= 1;
 
         self.addr_abs = 0xFFFA;
         let low = self.read(self.addr_abs) as u16;
