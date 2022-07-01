@@ -1,6 +1,5 @@
 use std::{fmt::Display, path::Path};
 
-use serde::{Deserialize, Serialize};
 
 use crate::bus::Device;
 
@@ -14,7 +13,6 @@ pub struct Cartridge {
 }
 
 // iNES Format Header
-#[derive(Serialize, Deserialize, Debug)]
 struct Header {
     name: [u8; 4],
     prog_rom_chunks: u8,

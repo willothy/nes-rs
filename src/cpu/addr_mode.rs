@@ -16,149 +16,132 @@ pub enum AddrMode {
     IZY,
 }
 
-pub trait AddressModes {
-    fn imp(&mut self) -> u8;
-    fn imm(&mut self) -> u8;
-    fn zp0(&mut self) -> u8;
-    fn zpx(&mut self) -> u8;
-    fn zpy(&mut self) -> u8;
-    fn rel(&mut self) -> u8;
-    fn abs(&mut self) -> u8;
-    fn abx(&mut self) -> u8;
-    fn aby(&mut self) -> u8;
-    fn ind(&mut self) -> u8;
-    fn izx(&mut self) -> u8;
-    fn izy(&mut self) -> u8;
+pub fn imp(cpu: &mut OLC6502) -> u8 {
+    cpu.fetched = cpu.registers.a;
+    0
 }
 
-impl AddressModes for OLC6502 {
-    fn imp(&mut self) -> u8 {
-        self.fetched = self.a;
+pub fn imm(cpu: &mut OLC6502) -> u8 {
+    cpu.pc += 1;
+    cpu.addr_abs = cpu.pc;
+    0
+}
+
+pub fn zp0(cpu: &mut OLC6502) -> u8 {
+    cpu.addr_abs = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+    cpu.addr_abs &= 0x00FF;
+    0
+}
+
+pub fn zpx(cpu: &mut OLC6502) -> u8 {
+    cpu.addr_abs = cpu.read(cpu.pc + cpu.registers.x as u16) as u16;
+    cpu.pc += 1;
+    cpu.addr_abs &= 0x00FF;
+    0
+}
+
+pub fn zpy(cpu: &mut OLC6502) -> u8 {
+    cpu.addr_abs = cpu.read(cpu.pc + cpu.registers.y as u16) as u16;
+    cpu.pc += 1;
+    cpu.addr_abs &= 0x00FF;
+    0
+}
+
+pub fn rel(cpu: &mut OLC6502) -> u8 {
+    cpu.addr_rel = cpu.read(cpu.pc as u16);
+    cpu.pc += 1;
+    if (cpu.addr_rel & 0x80) != 0x0 {
+        cpu.addr_rel |= 0xFF;
+    }
+    0
+}
+
+pub fn abs(cpu: &mut OLC6502) -> u8 {
+    let low: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+    let high: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    cpu.addr_abs = ((high) << 8) | low;
+
+    0
+}
+
+pub fn abx(cpu: &mut OLC6502) -> u8 {
+    let low: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+    let high: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    cpu.addr_abs = (((high) << 8) | low) + cpu.registers.x as u16;
+
+    if (cpu.addr_abs & 0xFF00) != (high << 8) {
+        1
+    } else {
         0
     }
+}
 
-    fn imm(&mut self) -> u8 {
-        self.pc += 1;
-        self.addr_abs = self.pc;
+pub fn aby(cpu: &mut OLC6502) -> u8 {
+    let low: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+    let high: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    cpu.addr_abs = (((high) << 8) | low) + cpu.registers.y as u16;
+
+    if (cpu.addr_abs & 0xFF00) != (high << 8) {
+        1
+    } else {
         0
     }
+}
 
-    fn zp0(&mut self) -> u8 {
-        self.addr_abs = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
+pub fn ind(cpu: &mut OLC6502) -> u8 {
+    let ptr_low = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+    let ptr_high = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    let ptr = (ptr_high << 8) | ptr_low;
+
+    if ptr_low == 0x00FF {
+        // Simulate page boundary hardware bug
+        cpu.addr_abs = ((cpu.read(ptr & 0xFF00) as u16) << 8) | cpu.read(ptr) as u16;
+    } else {
+        // Normal operation
+        cpu.addr_abs = ((cpu.read(ptr + 1) as u16) << 8) | cpu.read(ptr) as u16;
+    }
+
+    0
+}
+
+pub fn izx(cpu: &mut OLC6502) -> u8 {
+    let t: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    let low = cpu.read(t + cpu.registers.x as u16) as u16 & 0x00FF;
+    let high = cpu.read(t + cpu.registers.x as u16 + 1) as u16 & 0x00FF;
+
+    cpu.addr_abs = (high << 8) | low;
+
+    0
+}
+
+pub fn izy(cpu: &mut OLC6502) -> u8 {
+    let t: u16 = cpu.read(cpu.pc as u16) as u16;
+    cpu.pc += 1;
+
+    let low = cpu.read(t & 0x00FF) as u16;
+    let high = cpu.read((t + 1) & 0x00FF) as u16;
+
+    cpu.addr_abs = (high << 8) | low;
+    cpu.addr_abs += cpu.registers.y as u16;
+
+    if (cpu.addr_abs & 0xFF00) != (high << 8) {
+        1
+    } else {
         0
-    }
-
-    fn zpx(&mut self) -> u8 {
-        self.addr_abs = self.read(self.pc + self.x as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
-        0
-    }
-
-    fn zpy(&mut self) -> u8 {
-        self.addr_abs = self.read(self.pc + self.y as u16) as u16;
-        self.pc += 1;
-        self.addr_abs &= 0x00FF;
-        0
-    }
-
-    fn rel(&mut self) -> u8 {
-        self.addr_rel = self.read(self.pc as u16);
-        self.pc += 1;
-        if (self.addr_rel & 0x80) != 0x0 {
-            self.addr_rel |= 0xFF;
-        }
-        0
-    }
-
-    fn abs(&mut self) -> u8 {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = ((high) << 8) | low;
-
-        0
-    }
-
-    fn abx(&mut self) -> u8 {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = (((high) << 8) | low) + self.x as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            1
-        } else {
-            0
-        }
-    }
-
-    fn aby(&mut self) -> u8 {
-        let low: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let high: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        self.addr_abs = (((high) << 8) | low) + self.y as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            1
-        } else {
-            0
-        }
-    }
-
-    fn ind(&mut self) -> u8 {
-        let ptr_low = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-        let ptr_high = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let ptr = (ptr_high << 8) | ptr_low;
-
-        if ptr_low == 0x00FF {
-            // Simulate page boundary hardware bug
-            self.addr_abs = ((self.read(ptr & 0xFF00) as u16) << 8) | self.read(ptr) as u16;
-        } else {
-            // Normal operation
-            self.addr_abs = ((self.read(ptr + 1) as u16) << 8) | self.read(ptr) as u16;
-        }
-
-        0
-    }
-
-    fn izx(&mut self) -> u8 {
-        let t: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let low = self.read(t + self.x as u16) as u16 & 0x00FF;
-        let high = self.read(t + self.x as u16 + 1) as u16 & 0x00FF;
-
-        self.addr_abs = (high << 8) | low;
-
-        0
-    }
-
-    fn izy(&mut self) -> u8 {
-        let t: u16 = self.read(self.pc as u16) as u16;
-        self.pc += 1;
-
-        let low = self.read(t & 0x00FF) as u16;
-        let high = self.read((t + 1) & 0x00FF) as u16;
-
-        self.addr_abs = (high << 8) | low;
-        self.addr_abs += self.y as u16;
-
-        if (self.addr_abs & 0xFF00) != (high << 8) {
-            1
-        } else {
-            0
-        }
     }
 }

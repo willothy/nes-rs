@@ -20,13 +20,13 @@ impl std::fmt::Debug for dyn Device {
     }
 }
 
-pub struct Devices {
+pub struct CPUDevices {
     pub ppu: Rc<RefCell<OLC2C02>>,
     pub memory: Rc<RefCell<RAM>>,
     pub cartridge: Rc<RefCell<Cartridge>>,
 }
 
-impl Devices {
+impl CPUDevices {
     pub fn iter(&self) -> DeviceIter {
         DeviceIter {
             devices: vec![
@@ -51,7 +51,7 @@ impl Iterator for DeviceIter {
 }
 
 pub struct Bus {
-    pub devices: Devices,
+    pub devices: CPUDevices,
     pub clock_counter: usize,
     pub cpu: Weak<RefCell<OLC6502>>,
 }
@@ -75,7 +75,7 @@ impl Bus {
         let cartridge = Rc::new(RefCell::new(Cartridge::new("".to_string())));
         let ppu = Rc::new(RefCell::new(OLC2C02::new(cartridge.clone())));
         let bus = Bus {
-            devices: Devices {
+            devices: CPUDevices {
                 ppu,
                 memory: Rc::new(RefCell::new(RAM::new())),
                 cartridge,
@@ -99,6 +99,7 @@ impl Bus {
         0
     }
 
+    // Device functions must manipulate the address appropriately.
     pub fn cpu_write(&mut self, addr: u16, val: u8) {
         for device in self.devices.iter() {
             if device.borrow().in_addr_space(addr) {
