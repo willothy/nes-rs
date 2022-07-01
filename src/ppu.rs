@@ -33,7 +33,7 @@ impl OLC2C02 {
 
 impl Display for OLC2C02 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "OLC2C02")
+        write!(f, "PPU: OLC2C02")
     }
 }
 

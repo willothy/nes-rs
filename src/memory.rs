@@ -12,10 +12,10 @@ impl Display for RAM {
         let mut res = String::new();
         for (addr, i) in self.data.iter().enumerate() {
             if *i != 0 {
-                res.push_str(&format!("at {:02X}: {:02X}", addr, *i));
+                res.push_str(&format!("\t{0:04X}: {1:02X} ({1})", addr, *i));
             }
         }
-        write!(f, "{}", res)
+        write!(f, "Memory (2kb): [\n{}\n]", res)
     }
 }
 
