@@ -1,6 +1,8 @@
+use std::fmt::Display;
+
 use super::OLC6502;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum AddrMode {
     IMP,
     IMM,
@@ -14,6 +16,12 @@ pub enum AddrMode {
     IND,
     IZX,
     IZY,
+}
+
+impl Display for AddrMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub fn imp(cpu: &mut OLC6502) -> u8 {

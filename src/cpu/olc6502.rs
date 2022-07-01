@@ -23,10 +23,17 @@ pub enum StatusFlags {
     N = (1 << 7), // Negative
 }
 
+#[derive(Debug)]
 pub struct Registers {
-    pub(super) a: u8,
-    pub(super) x: u8,
-    pub(super) y: u8
+    pub a: u8,
+    pub x: u8,
+    pub y: u8
+}
+
+impl Display for Registers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{0}A: {1:02X} ({1}) {0}X: {2:02X} ({2}) {0}Y: {3:02X} ({3})", "\n\t", self.a, self.x, self.y)
+    }
 }
 
 pub struct OLC6502 {
@@ -34,7 +41,7 @@ pub struct OLC6502 {
     pub(super) st: u8,
     pub(super) sp: u8,
     pub(super) pc: u16,
-    pub(super) registers: Registers,
+    pub(crate) registers: Registers,
     pub(super) fetched: u8,
     pub(super) addr_abs: u16,
     pub(super) addr_rel: u8,
@@ -44,6 +51,15 @@ pub struct OLC6502 {
 
 impl Display for OLC6502 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        writeln!(f, "Registers: [{}\n]", self.registers)?;
+        writeln!(f, "Status: {:02X}", self.st)?;
+        writeln!(f, "Stack pointer: {:02X}", self.sp)?;
+        writeln!(f, "Program counter: {:04X}", self.pc)?;
+        /* writeln!(f, "Fetched: {:02X}", self.fetched)?;
+        writeln!(f, "Address absolute: {:04X}", self.addr_abs)?;
+        writeln!(f, "Address relative: {:02X}", self.addr_rel)?;
+        writeln!(f, "Opcode: {:02X}", self.opcode)?;
+        writeln!(f, "Cycles: {:?}", self.cycles)?; */
         write!(f, "{}", self.bus.borrow().to_string())
     }
 }
@@ -66,28 +82,25 @@ impl OLC6502 {
             opcode: 0x00,
             cycles: 0x00,
         };
+        cpu.reset();
         cpu
     }
 
     pub fn addr_mode(&mut self, addr_mode: AddrMode) -> u8 {
         match addr_mode {
-            IMP => addr_mode::imp(self),
-            IMM => addr_mode::imm(self),
-            ZP0 => addr_mode::zp0(self),
-            ZPX => addr_mode::zpx(self),
-            ZPY => addr_mode::zpy(self),
-            REL => addr_mode::rel(self),
-            ABS => addr_mode::abs(self),
-            ABX => addr_mode::abx(self),
-            ABY => addr_mode::aby(self),
-            IND => addr_mode::ind(self),
-            IZX => addr_mode::izx(self),
-            IZY => addr_mode::izy(self),
+            AddrMode::IMP => addr_mode::imp(self),
+            AddrMode::IMM => addr_mode::imm(self),
+            AddrMode::ZP0 => addr_mode::zp0(self),
+            AddrMode::ZPX => addr_mode::zpx(self),
+            AddrMode::ZPY => addr_mode::zpy(self),
+            AddrMode::REL => addr_mode::rel(self),
+            AddrMode::ABS => addr_mode::abs(self),
+            AddrMode::ABX => addr_mode::abx(self),
+            AddrMode::ABY => addr_mode::aby(self),
+            AddrMode::IND => addr_mode::ind(self),
+            AddrMode::IZX => addr_mode::izx(self),
+            AddrMode::IZY => addr_mode::izy(self),
         }
-    }
-
-    pub fn test(&mut self) {
-        self.operate(opcode::tax);
     }
 
     pub fn operate(&mut self, opcode: fn(&mut Self) -> u8) -> u8 {
@@ -124,17 +137,31 @@ impl OLC6502 {
     pub fn clock(&mut self) {
         if self.cycles == 0 {
             self.opcode = self.read(self.pc);
-            self.pc += 1;
 
             let inst = Instruction::from(self.opcode);
+            println!("{:?}", inst);
+
             self.cycles = inst.cycles;
             let mut additional_cycles = 0;
             additional_cycles += self.addr_mode(inst.addr_mode);
             additional_cycles += self.operate(inst.opcode);
 
+            self.pc += 1/* inst.len as u16 */;
+
             self.cycles += additional_cycles;
         }
         self.cycles -= 1;
+    }
+
+    pub fn is_running(&mut self) -> bool {
+        self.st & B as u8 != B as u8
+    }
+
+    pub fn reset_program(&mut self, prog_addr: u16) {
+        self.addr_abs = prog_addr;
+        let low = self.read(self.addr_abs);
+        let high = self.read(self.addr_abs + 1);
+        self.pc = (high as u16) << 8 | low as u16;
     }
 
     pub fn reset(&mut self) {

@@ -68,7 +68,7 @@ impl Display for Cartridge {
 
 impl Device for Cartridge {
     fn in_addr_space(&self, addr: u16) -> bool {
-        todo!()
+        false
     }
 
     fn read(&self, addr: u16, readonly: bool) -> u8 {

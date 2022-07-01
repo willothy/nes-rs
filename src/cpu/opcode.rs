@@ -132,7 +132,8 @@ pub fn bpl(cpu: &mut OLC6502) -> u8 {
 }
 
 pub fn brk(cpu: &mut OLC6502) -> u8 {
-    todo!()
+    cpu.set_flag(B, true);
+    0
 }
 
 pub fn bvc(cpu: &mut OLC6502) -> u8 {
@@ -196,7 +197,8 @@ pub fn inc(cpu: &mut OLC6502) -> u8 {
 }
 
 pub fn inx(cpu: &mut OLC6502) -> u8 {
-    todo!()
+    cpu.registers.x += 1;
+    0
 }
 
 pub fn iny(cpu: &mut OLC6502) -> u8 {
@@ -212,7 +214,12 @@ pub fn jsr(cpu: &mut OLC6502) -> u8 {
 }
 
 pub fn lda(cpu: &mut OLC6502) -> u8 {
-    todo!()
+    cpu.registers.a = cpu.read(cpu.pc);
+    //cpu.pc += 1;
+
+    cpu.set_flag(Z, cpu.registers.a == 0x00);
+    cpu.set_flag(N, cpu.registers.a & 0x80 != 0);
+    0
 }
 
 pub fn ldx(cpu: &mut OLC6502) -> u8 {
@@ -322,7 +329,10 @@ pub fn tax(cpu: &mut OLC6502) -> u8 {
 }
 
 pub fn tay(cpu: &mut OLC6502) -> u8 {
-    todo!()
+    cpu.registers.y = cpu.registers.a;
+    cpu.set_flag(Z, cpu.registers.y != 0);
+    cpu.set_flag(N, cpu.registers.y & 0b10000000 != 0);
+    0x00
 }
 
 pub fn tsx(cpu: &mut OLC6502) -> u8 {

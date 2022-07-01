@@ -2,12 +2,22 @@ use crate::cpu::opcode;
 
 use super::{addr_mode::AddrMode, OLC6502};
 
+
 pub struct Instruction {
     pub name: String,
     pub opcode: fn(&mut OLC6502) -> u8,
     pub addr_mode: AddrMode,
     pub cycles: u8,
     pub len: u8,
+}
+
+impl std::fmt::Debug for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        writeln!(f, "Name: {}", self.name)?;
+        writeln!(f, "Mode: {}", self.addr_mode)?;
+        writeln!(f, "Cycles: {}", self.cycles)?;
+        write!(f, "Len: {}", self.len)
+    }
 }
 
 impl From<u8> for Instruction {
