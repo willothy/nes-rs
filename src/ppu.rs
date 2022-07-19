@@ -1,12 +1,12 @@
-use std::{cell::RefCell, fmt::Display, ptr::null_mut, rc::Rc};
+use std::{cell::RefCell, fmt::Display, ptr::null_mut, rc::{Rc, Weak}};
 
-use crate::{bus::Device, cartridge::Cartridge};
+use crate::{bus::Device, cartridge::Cartridge, cpu::OLC6502};
 
-#[derive(Debug)]
 pub struct OLC2C02 {
     cartridge: Rc<RefCell<Cartridge>>,
     name_table: [[u8; 1024]; 2],
     palette_table: [u8; 32],
+    cpu: Weak<RefCell<OLC6502>>
 }
 
 impl OLC2C02 {
@@ -15,7 +15,12 @@ impl OLC2C02 {
             cartridge,
             name_table: [[0; 1024]; 2],
             palette_table: [0; 32],
+            cpu: Weak::new()
         }
+    }
+
+    pub fn connect_cpu(&mut self, cpu: Rc<RefCell<OLC6502>>) {
+        self.cpu = Rc::downgrade(&cpu);
     }
 
     pub fn clock(&mut self) {}
@@ -32,7 +37,7 @@ impl OLC2C02 {
 }
 
 impl Display for OLC2C02 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "PPU: OLC2C02")
     }
 }

@@ -88,6 +88,7 @@ impl Bus {
 
     pub fn connect_cpu(&mut self, cpu: Rc<RefCell<OLC6502>>) {
         self.cpu = Rc::downgrade(&cpu);
+        self.devices.ppu.as_ref().borrow_mut().connect_cpu(cpu.clone());
     }
 
     pub fn cpu_read(&self, addr: u16, readonly: bool) -> u8 {

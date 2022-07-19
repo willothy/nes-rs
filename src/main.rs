@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use self::cpu::OLC6502;
 
+mod constants;
 mod bus;
 mod cartridge;
 mod cpu;
@@ -13,9 +14,10 @@ fn main() {
 
     let cpu_ptr = Rc::new(RefCell::new(OLC6502::new(bus)));
 
-    let mut cpu = (*cpu_ptr).borrow_mut();
+    let cpu = (*cpu_ptr).borrow_mut();
 
     cpu.bus.borrow_mut().connect_cpu(cpu_ptr.clone());
+    //cpu.bus.borrow_mut().connect_ppu(cpu_ptr.clone());
 }
 
 
